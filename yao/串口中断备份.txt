@@ -1,0 +1,64 @@
+//	if(USART1->SR & 0x20)//receive
+//	{
+//		rec_sync(USART1->DR,&sync_pack);
+//	}
+//    
+//	USART1->SR = USART1->SR =0;
+		OS_CPU_SR cpu_sr=0;	
+		u8 Res;
+		u8 t;
+		u8 len;	
+	 OS_ENTER_CRITICAL();//进入临界区（关闭中断）
+		if(USART_GetITStatus(USART1, USART_IT_RXNE) != RESET)  //  
+	//		if (USART_GetFlagStatus(USART1, USART_FLAG_ORE) != RESET)
+				{
+				Res =USART_ReceiveData(USART1);//(USART1->DR);	//
+					
+				if((USART_RX_STA&0x8000)==0)//
+					{
+				
+					if(USART_RX_STA&0x4000)//
+						{
+					
+							USART_RX_STA|=0x8000;	//
+
+						}
+					else //
+						{	
+						if(Res==0x0d||Res==0x0a)
+							{
+							USART_RX_BUF[USART_RX_STA&0X3FFF]=Res ;
+							USART_RX_STA|=0x4000;
+								
+							}
+						else
+							{
+							USART_RX_BUF[USART_RX_STA&0X3FFF]=Res ;
+							USART_RX_STA++;
+							if(USART_RX_STA>(USART_REC_LEN-1))USART_RX_STA=0;//	  
+							}		 
+						}
+					}
+
+
+     if(USART_RX_STA&0x8000)
+		{	 
+       len=USART_RX_STA&0x3f;
+			for(t=0;t<len+1;t++)
+			{ 
+        EnQueue(&sqeue,USART_RX_BUF[t]);
+			//rec_sync(USART_RX_BUF[t],&sync_pack);
+				while(USART_GetFlagStatus(USART1,USART_FLAG_TC)!=SET);//
+			}
+			USART_RX_STA=0;				
+		}
+  }
+			OS_EXIT_CRITICAL();//退出临界区（开中断）
+	////发送端中断标志位处理
+//	    if( USART_GetITStatus(USART1, USART_IT_TC) == SET  )
+//    {
+//        if( *pDataByte == '\0' )//TC需要 读SR+写DR 方可清0,当发送到最后,到'\0'的时候用个if判断关掉
+//            USART_ClearFlag(USART1, USART_FLAG_TC);//不然TC一直是set, TCIE也是打开的,导致会不停进入中断. clear掉即可,不用关掉TCIE
+//        else
+//            USART_SendData(USART1, *pDataByte++ );
+//    }
